@@ -1,0 +1,27 @@
+# Mode dev : modifications de src/ visibles sans rebuild (Next dev + volumes).
+# OpenClaw reste l’image prod habituelle.
+#
+#   docker compose --env-file docker/.env -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# Sur Windows / Docker Desktop, le polling aide souvent le file watcher :
+#   CHOKIDAR_USEPOLLING / WATCHPACK_POLLING sont déjà définis ci-dessous.
+
+services:
+  tenacitos:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - tenacitos_node_modules:/app/node_modules
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      NEXT_PUBLIC_AGENT_NAME: ${NEXT_PUBLIC_AGENT_NAME:-Mission Control}
+      NEXT_PUBLIC_AGENT_EMOJI: ${NEXT_PUBLIC_AGENT_EMOJI:-🤖}
+      NEXT_PUBLIC_AGENT_DESCRIPTION: ${NEXT_PUBLIC_AGENT_DESCRIPTION:-OpenClaw Mission Control}
+      NEXT_PUBLIC_APP_TITLE: ${NEXT_PUBLIC_APP_TITLE:-Mission Control}
+
+volumes:
+  tenacitos_node_modules:

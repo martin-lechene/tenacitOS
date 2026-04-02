@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Box, Text } from '@react-three/drei';
+import { Box, Html } from '@react-three/drei';
 import type { Group } from 'three';
 import type { AgentConfig } from './agentsConfig';
 
@@ -89,16 +89,24 @@ export default function VoxelAvatar({
           </Box>
         )}
 
-        {/* Emoji badge on forehead */}
-        <Text
+        {/* Emoji badge — drei Text/Troika cannot render emoji (throws at runtime) */}
+        <Html
           position={[0, 0.08, 0.11]}
-          fontSize={0.08}
-          color="white"
-          anchorX="center"
-          anchorY="middle"
+          center
+          distanceFactor={6}
+          style={{ pointerEvents: 'none', userSelect: 'none' }}
         >
-          {agent.emoji}
-        </Text>
+          <span
+            style={{
+              fontSize: 28,
+              lineHeight: 1,
+              filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))',
+            }}
+            aria-hidden
+          >
+            {agent.emoji}
+          </span>
+        </Html>
 
         {/* Thinking particles effect */}
         {isThinking && (

@@ -4,6 +4,21 @@ import { join } from "path";
 
 export const dynamic = "force-dynamic";
 
+function resolveGatewayBaseUrl(): string {
+  const raw =
+    process.env.OPENCLAW_GATEWAY_URL?.trim() || "http://127.0.0.1:18789";
+  return raw.replace(/\/$/, "");
+}
+
+function resolveGatewayToken(config: Record<string, unknown>): string | undefined {
+  const env = process.env.OPENCLAW_GATEWAY_TOKEN?.trim();
+  if (env) return env;
+  const auth = (config as { gateway?: { auth?: { token?: unknown } } })
+    .gateway?.auth;
+  const t = auth?.token;
+  return typeof t === "string" && t.length > 0 ? t : undefined;
+}
+
 const AGENT_CONFIG = {
   main: { emoji: "🦞", color: "#ff6b35", name: "Tenacitas", role: "Boss" },
   academic: {
@@ -64,15 +79,17 @@ async function getAgentStatusFromGateway(): Promise<
   try {
     const configPath = (process.env.OPENCLAW_DIR || "/root/.openclaw") + "/openclaw.json";
     const config = JSON.parse(readFileSync(configPath, "utf-8"));
-    const gatewayToken = config.gateway?.auth?.token;
+    const gatewayToken = resolveGatewayToken(config);
 
     if (!gatewayToken) {
-      console.warn("No gateway token found");
+      console.warn(
+        "Gateway token missing: set OPENCLAW_GATEWAY_TOKEN or gateway.auth.token in openclaw.json",
+      );
       return {};
     }
 
-    // Try to fetch sessions from gateway
-    const response = await fetch("http://localhost:18789/api/sessions", {
+    const gatewayBase = resolveGatewayBaseUrl();
+    const response = await fetch(`${gatewayBase}/api/sessions`, {
       headers: {
         Authorization: `Bearer ${gatewayToken}`,
       },

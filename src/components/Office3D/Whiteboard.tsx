@@ -76,7 +76,7 @@ export default function Whiteboard({ position, rotation = [0, 0, 0], onClick }: 
           anchorX="center"
           anchorY="middle"
         >
-          📋 Click to view
+          Click to view
         </Text>
       )}
     </group>

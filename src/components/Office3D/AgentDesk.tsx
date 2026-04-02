@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text, Box } from '@react-three/drei';
+import { Text, Box, Html } from '@react-three/drei';
 import type { Mesh } from 'three';
 import type { AgentConfig, AgentState } from './agentsConfig';
 import VoxelAvatar from './VoxelAvatar';
@@ -123,18 +123,25 @@ export default function AgentDesk({ agent, state, onClick, isSelected }: AgentDe
         />
       </group>
 
-      {/* Nameplate */}
-      <Text
+      {/* Nameplate — emoji via Html (Troika Text breaks on surrogate pairs) */}
+      <Html
         position={[0, 2.5, 0]}
-        fontSize={0.15}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.01}
-        outlineColor="#000000"
+        center
+        distanceFactor={10}
+        style={{ pointerEvents: 'none', userSelect: 'none', whiteSpace: 'nowrap' }}
       >
-        {agent.emoji} {agent.name}
-      </Text>
+        <span
+          style={{
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: 14,
+            textShadow: '0 0 4px #000, 0 1px 2px #000',
+          }}
+        >
+          <span style={{ marginRight: 6 }}>{agent.emoji}</span>
+          {agent.name}
+        </span>
+      </Html>
 
       {/* Status indicator text */}
       <Text

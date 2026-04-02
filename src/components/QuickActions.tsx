@@ -9,6 +9,7 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import { ChangePasswordModal } from "./ChangePasswordModal";
 
@@ -33,9 +34,9 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
     message: string;
   } | null>(null);
 
-  const showNotification = (type: "success" | "error", message: string) => {
+  const showNotification = (type: "success" | "error", message: string, ms = 3000) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 3000);
+    setTimeout(() => setNotification(null), ms);
   };
 
   const handleRestartGateway = async () => {
@@ -68,6 +69,44 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
     showNotification("success", "Opening gateway logs... (placeholder)");
   };
 
+  const handleHelloWorldNotify = async () => {
+    setLoadingAction("hello_notify");
+    try {
+      const res = await fetch("/api/notify/hello", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Hello world from TenacitOS" }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        partial?: boolean;
+        results?: {
+          discord?: { ok: boolean; error?: string; status?: number };
+          whatsapp?: { ok: boolean; error?: string; hint?: string; status?: number };
+        };
+      };
+      const d = data.results?.discord;
+      const w = data.results?.whatsapp;
+      const parts = [
+        d?.ok ? "Discord OK" : `Discord: ${d?.error || "failed"}`,
+        w?.ok ? "WhatsApp OK" : `WhatsApp: ${w?.error || "failed"}`,
+      ];
+      if (!w?.ok && w?.hint) parts.push(w.hint);
+      if (data.ok) {
+        showNotification("success", parts.join(" · "), 8000);
+      } else if (data.partial) {
+        showNotification("error", parts.join(" · "), 12000);
+      } else {
+        showNotification("error", parts.join(" · "), 12000);
+      }
+      onActionComplete?.();
+    } catch {
+      showNotification("error", "Notify hello request failed", 5000);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const actions: ActionButton[] = [
     {
       id: "restart",
@@ -76,6 +115,13 @@ export function QuickActions({ onActionComplete }: QuickActionsProps) {
       color: "blue",
       action: handleRestartGateway,
       placeholder: true,
+    },
+    {
+      id: "hello_notify",
+      label: "Hello world (Discord + WhatsApp)",
+      icon: Send,
+      color: "emerald",
+      action: handleHelloWorldNotify,
     },
     {
       id: "clear_log",

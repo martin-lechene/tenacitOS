@@ -3,7 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-import { OPENCLAW_WORKSPACE, WORKSPACE_IDENTITY } from '@/lib/paths';
+import {
+  OPENCLAW_CONFIG,
+  OPENCLAW_DIR,
+  OPENCLAW_WORKSPACE,
+  WORKSPACE_IDENTITY,
+} from '@/lib/paths';
 
 const WORKSPACE_PATH = OPENCLAW_WORKSPACE;
 const IDENTITY_PATH = WORKSPACE_IDENTITY;
@@ -33,8 +38,7 @@ function getIntegrationStatus() {
   let telegramEnabled = false;
   let telegramAccounts = 0;
   try {
-    const openclawConfigPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
-    const openclawConfig = JSON.parse(fs.readFileSync(openclawConfigPath, 'utf-8'));
+    const openclawConfig = JSON.parse(fs.readFileSync(OPENCLAW_CONFIG, 'utf-8'));
     const telegramConfig = openclawConfig?.channels?.telegram;
     telegramEnabled = !!(telegramConfig?.enabled);
     if (telegramConfig?.accounts) {
@@ -48,6 +52,45 @@ function getIntegrationStatus() {
     icon: 'MessageCircle',
     lastActivity: telegramEnabled ? new Date().toISOString() : null,
     detail: telegramEnabled ? `${telegramAccounts} bots configured` : null,
+  });
+
+  // WhatsApp — read from openclaw.json (channels.whatsapp) + coarse session hint
+  let whatsappEnabled = false;
+  let whatsappLinked = false;
+  try {
+    const openclawConfig = JSON.parse(fs.readFileSync(OPENCLAW_CONFIG, 'utf-8'));
+    const wa = openclawConfig?.channels?.whatsapp;
+    whatsappEnabled = !!(wa && typeof wa === 'object' && wa.enabled === true);
+    if (wa?.linked === true || wa?.status === 'linked') whatsappLinked = true;
+    const credRoot = path.join(OPENCLAW_DIR, 'credentials');
+    if (fs.existsSync(credRoot)) {
+      const subs = fs.readdirSync(credRoot, { withFileTypes: true });
+      whatsappLinked =
+        whatsappLinked ||
+        subs.some(
+          (d) =>
+            d.isDirectory() &&
+            /whatsapp|baileys|wwebjs|webjs/i.test(d.name)
+        );
+    }
+  } catch {}
+  let whatsappStatus: 'connected' | 'configured' | 'not_configured';
+  let whatsappDetail: string | null = null;
+  if (!whatsappEnabled) {
+    whatsappStatus = 'not_configured';
+  } else if (whatsappLinked) {
+    whatsappStatus = 'connected';
+  } else {
+    whatsappStatus = 'configured';
+    whatsappDetail = 'Channel enabled — finish QR / pairing in OpenClaw if needed';
+  }
+  integrations.push({
+    id: 'whatsapp',
+    name: 'WhatsApp',
+    status: whatsappStatus,
+    icon: 'Smartphone',
+    lastActivity: whatsappLinked ? new Date().toISOString() : null,
+    detail: whatsappDetail,
   });
 
   // Twitter (bird CLI) - check TOOLS.md for configuration
@@ -70,8 +113,7 @@ function getIntegrationStatus() {
   let googleConfigured = false;
   let googleDetail: string | null = null;
   try {
-    const openclawConfigPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
-    const openclawConfig = JSON.parse(fs.readFileSync(openclawConfigPath, 'utf-8'));
+    const openclawConfig = JSON.parse(fs.readFileSync(OPENCLAW_CONFIG, 'utf-8'));
     const gogPlugin = openclawConfig?.plugins?.entries?.['google-gemini-cli-auth'];
     googleConfigured = !!(gogPlugin?.enabled);
     if (googleConfigured) googleDetail = 'google-gemini-cli-auth plugin enabled';
@@ -99,7 +141,10 @@ export async function GET() {
   const identity = parseIdentityMd();
   const uptime = process.uptime();
   const nodeVersion = process.version;
-  const model = process.env.OPENCLAW_MODEL || process.env.DEFAULT_MODEL || 'anthropic/claude-sonnet-4';
+  const model =
+    process.env.OPENCLAW_MODEL ||
+    process.env.DEFAULT_MODEL ||
+    "ollama/llama3.2:3b";
   
   const systemInfo = {
     agent: {

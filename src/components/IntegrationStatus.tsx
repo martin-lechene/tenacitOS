@@ -1,6 +1,14 @@
 "use client";
 
-import { MessageCircle, Twitter, Mail, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import {
+  MessageCircle,
+  Twitter,
+  Mail,
+  Smartphone,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Integration {
@@ -9,6 +17,7 @@ interface Integration {
   status: "connected" | "disconnected" | "configured" | "not_configured";
   icon: string;
   lastActivity: string | null;
+  detail?: string | null;
 }
 
 interface IntegrationStatusProps {
@@ -19,6 +28,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   MessageCircle,
   Twitter,
   Mail,
+  Smartphone,
 };
 
 const statusConfig = {
@@ -61,6 +71,7 @@ export function IntegrationStatus({ integrations }: IntegrationStatusProps) {
           <div className="h-16 bg-gray-800 rounded"></div>
           <div className="h-16 bg-gray-800 rounded"></div>
           <div className="h-16 bg-gray-800 rounded"></div>
+          <div className="h-16 bg-gray-800 rounded"></div>
         </div>
       </div>
     );
@@ -90,6 +101,11 @@ export function IntegrationStatus({ integrations }: IntegrationStatusProps) {
                 </div>
                 <div>
                   <div className="font-medium text-white">{integration.name}</div>
+                  {integration.detail && (
+                    <div className="text-xs text-gray-500 mt-0.5 max-w-md">
+                      {integration.detail}
+                    </div>
+                  )}
                   {integration.lastActivity && (
                     <div className="text-xs text-gray-400">
                       Last activity:{" "}

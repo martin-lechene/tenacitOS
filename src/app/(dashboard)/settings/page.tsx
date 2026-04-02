@@ -32,6 +32,7 @@ interface SystemData {
     status: "connected" | "disconnected" | "configured" | "not_configured";
     icon: string;
     lastActivity: string | null;
+    detail?: string | null;
   }>;
   timestamp: string;
 }

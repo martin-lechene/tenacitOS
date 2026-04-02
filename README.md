@@ -54,6 +54,21 @@ A real-time dashboard and control center for [OpenClaw](https://openclaw.ai) AI 
 - **PM2** or **systemd** (recommended for production)
 - **Caddy** or another reverse proxy (for HTTPS in production)
 
+### Docker (OpenClaw + TenacitOS)
+
+Run both [OpenClaw](https://openclaw.ai) (gateway) and TenacitOS in Docker with a **shared volume** for `/root/.openclaw` (same layout as a normal install). Official OpenClaw Docker notes: [docs.openclaw.ai/install/docker](https://docs.openclaw.ai/install/docker).
+
+```bash
+cp docker/env.docker.example docker/.env
+# Edit docker/.env: set ADMIN_PASSWORD and AUTH_SECRET (openssl rand -base64 32)
+docker compose --env-file docker/.env up --build -d
+```
+
+- **TenacitOS:** [http://localhost:8119](http://localhost:8119) (login with `ADMIN_PASSWORD`)
+- **OpenClaw gateway** (Control UI / WebSocket): [http://localhost:18789](http://localhost:18789)
+
+Configure model API keys and channels via `docker compose exec openclaw openclaw …` or by editing files under the `openclaw_data` volume. With `gateway.bind=lan`, set `OPENCLAW_GATEWAY_TOKEN` in `docker/.env` for gateway auth (see OpenClaw security docs).
+
 ---
 
 ## How it works

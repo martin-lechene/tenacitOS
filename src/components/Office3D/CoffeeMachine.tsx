@@ -129,7 +129,7 @@ export default function CoffeeMachine({ position, onClick }: CoffeeMachineProps)
           anchorX="center"
           anchorY="middle"
         >
-          ☕ Agent Energy
+          Agent Energy
         </Text>
       )}
     </group>

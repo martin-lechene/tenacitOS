@@ -1,0 +1,69 @@
+# TenacitOS + OpenClaw — shared OpenClaw data volume
+# Docs: https://openclaw.ai/ · https://docs.openclaw.ai/install/docker
+#
+# Usage:
+#   cp docker/env.docker.example docker/.env
+#   # Edit docker/.env (ADMIN_PASSWORD, AUTH_SECRET, optional API keys)
+#   docker compose --env-file docker/.env up --build
+#
+# URLs:
+#   TenacitOS: http://localhost:8119
+#   OpenClaw gateway (Control UI / WebSocket): http://localhost:18789
+#
+# Dev (hot reload, pas de rebuild à chaque changement de fichier) :
+#   docker compose --env-file docker/.env -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.openclaw
+    restart: unless-stopped
+    environment:
+      HOME: /root
+      OPENCLAW_DIR: /root/.openclaw
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      OPENCLAW_WHATSAPP_ALLOW_FROM: ${OPENCLAW_WHATSAPP_ALLOW_FROM:-32496881898}
+      OPENCLAW_WHATSAPP_DENYLIST: ${OPENCLAW_WHATSAPP_DENYLIST:-32471103654}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-ollama-local}
+      OPENCLAW_OLLAMA_BASE_URL: ${OPENCLAW_OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OPENCLAW_OLLAMA_MODEL_ID: ${OPENCLAW_OLLAMA_MODEL_ID:-llama3.2:3b}
+      OPENCLAW_OLLAMA_CONTEXT_WINDOW: ${OPENCLAW_OLLAMA_CONTEXT_WINDOW:-8192}
+      OPENCLAW_OLLAMA_MAX_TOKENS: ${OPENCLAW_OLLAMA_MAX_TOKENS:-4096}
+      OPENCLAW_MODEL_PRIMARY: ${OPENCLAW_MODEL_PRIMARY:-ollama/llama3.2:3b}
+    volumes:
+      - openclaw_data:/root/.openclaw
+    ports:
+      - "18789:18789"
+
+  tenacitos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_AGENT_NAME: ${NEXT_PUBLIC_AGENT_NAME:-Mission Control}
+        NEXT_PUBLIC_AGENT_EMOJI: ${NEXT_PUBLIC_AGENT_EMOJI:-🤖}
+        NEXT_PUBLIC_AGENT_DESCRIPTION: ${NEXT_PUBLIC_AGENT_DESCRIPTION:-OpenClaw Mission Control}
+        NEXT_PUBLIC_APP_TITLE: ${NEXT_PUBLIC_APP_TITLE:-Mission Control}
+    restart: unless-stopped
+    depends_on:
+      - openclaw
+    environment:
+      OPENCLAW_DIR: /root/.openclaw
+      OPENCLAW_WORKSPACE: /root/.openclaw/workspace
+      OPENCLAW_GATEWAY_URL: http://openclaw:18789
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:-}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+      NOTIFY_WHATSAPP_E164: ${NOTIFY_WHATSAPP_E164:-+32496881898}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in docker/.env}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in docker/.env}
+    volumes:
+      - openclaw_data:/root/.openclaw
+      - tenacitos_data:/app/data
+    ports:
+      - "8119:3000"
+
+volumes:
+  openclaw_data:
+  tenacitos_data:

@@ -2,10 +2,10 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Sky, Environment } from '@react-three/drei';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { Vector3 } from 'three';
 import { AGENTS } from './agentsConfig';
-import type { AgentState } from './agentsConfig';
+import type { AgentState, AgentStatus } from './agentsConfig';
 import AgentDesk from './AgentDesk';
 import Floor from './Floor';
 import Walls from './Walls';
@@ -19,21 +19,64 @@ import WallClock from './WallClock';
 import FirstPersonControls from './FirstPersonControls';
 import MovingAvatar from './MovingAvatar';
 
+function defaultStateForAgent(id: string): AgentState {
+  return { id, status: 'idle', currentTask: 'Idle...' };
+}
+
+function officeApiToAgentState(row: {
+  id: string;
+  currentTask?: string;
+  isActive?: boolean;
+}): AgentState {
+  const task = row.currentTask || '';
+  let status: AgentStatus = 'idle';
+  if (task.startsWith('ACTIVE:') || row.isActive) status = 'working';
+  else if (task.startsWith('IDLE:')) status = 'idle';
+  else if (task.startsWith('SLEEPING:')) status = 'idle';
+  else if (task.toLowerCase().includes('error') || task.includes('ERROR')) status = 'error';
+  else if (task.includes('thinking') || task.includes('Thinking')) status = 'thinking';
+
+  return {
+    id: row.id,
+    status,
+    currentTask: task.replace(/^(ACTIVE|IDLE|SLEEPING):\s*/i, '').trim() || task,
+  };
+}
+
 export default function Office3D() {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [interactionModal, setInteractionModal] = useState<string | null>(null);
   const [controlMode, setControlMode] = useState<'orbit' | 'fps'>('orbit');
   const [avatarPositions, setAvatarPositions] = useState<Map<string, any>>(new Map());
-  
-  // Mock data - TODO: Replace with real API data
-  const [agentStates] = useState<Record<string, AgentState>>({
-    main: { id: 'main', status: 'working', currentTask: 'Procesando emails', model: 'opus', tokensPerHour: 15000, tasksInQueue: 3, uptime: 12 },
-    academic: { id: 'academic', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 8 },
-    studio: { id: 'studio', status: 'thinking', currentTask: 'Generando guión YouTube', model: 'opus', tokensPerHour: 8000, tasksInQueue: 1, uptime: 5 },
-    linkedin: { id: 'linkedin', status: 'working', currentTask: 'Redactando post', model: 'sonnet', tokensPerHour: 5000, tasksInQueue: 2, uptime: 10 },
-    social: { id: 'social', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 7 },
-    infra: { id: 'infra', status: 'error', currentTask: 'Failed deployment', model: 'haiku', tokensPerHour: 1000, tasksInQueue: 0, uptime: 15 },
-  });
+  const [agentStates, setAgentStates] = useState<Record<string, AgentState>>({});
+
+  const refreshOffice = useCallback(async () => {
+    try {
+      const res = await fetch('/api/office', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        agents?: Array<{ id: string; currentTask?: string; isActive?: boolean }>;
+      };
+      const next: Record<string, AgentState> = {};
+      for (const row of data.agents || []) {
+        next[row.id] = officeApiToAgentState(row);
+      }
+      setAgentStates(next);
+    } catch {
+      /* keep previous */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshOffice();
+    const t = setInterval(() => void refreshOffice(), 30_000);
+    return () => clearInterval(t);
+  }, [refreshOffice]);
+
+  const stateFor = (id: string) => agentStates[id] ?? defaultStateForAgent(id);
+  const selectedCfg = selectedAgent
+    ? AGENTS.find((a) => a.id === selectedAgent)
+    : undefined;
 
   const handleDeskClick = (agentId: string) => {
     setSelectedAgent(agentId);
@@ -84,7 +127,7 @@ export default function Office3D() {
   ];
 
   return (
-    <div className="fixed inset-0 bg-gray-900" style={{ height: '100vh', width: '100vw' }}>
+    <div className="relative h-full w-full min-h-0 bg-gray-900">
       <Canvas
         camera={{ position: [0, 8, 12], fov: 60 }}
         shadows
@@ -115,7 +158,7 @@ export default function Office3D() {
             <AgentDesk
               key={agent.id}
               agent={agent}
-              state={agentStates[agent.id]}
+              state={stateFor(agent.id)}
               onClick={() => handleDeskClick(agent.id)}
               isSelected={selectedAgent === agent.id}
             />
@@ -126,7 +169,7 @@ export default function Office3D() {
             <MovingAvatar
               key={`avatar-${agent.id}`}
               agent={agent}
-              state={agentStates[agent.id]}
+              state={stateFor(agent.id)}
               officeBounds={{ minX: -8, maxX: 8, minZ: -7, maxZ: 7 }}
               obstacles={obstacles}
               otherAvatarPositions={avatarPositions}
@@ -175,10 +218,10 @@ export default function Office3D() {
       </Canvas>
 
       {/* Panel lateral cuando se selecciona un agente */}
-      {selectedAgent && (
+      {selectedCfg && (
         <AgentPanel
-          agent={AGENTS.find(a => a.id === selectedAgent)!}
-          state={agentStates[selectedAgent]}
+          agent={selectedCfg}
+          state={stateFor(selectedCfg.id)}
           onClose={handleClosePanel}
         />
       )}

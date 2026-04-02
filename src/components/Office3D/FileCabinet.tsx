@@ -79,7 +79,7 @@ export default function FileCabinet({ position, onClick }: FileCabinetProps) {
           anchorX="center"
           anchorY="middle"
         >
-          📁 MEMORY
+          MEMORY
         </Text>
       )}
     </group>

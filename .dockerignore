@@ -1,0 +1,15 @@
+.git
+.github
+.next
+node_modules
+data/*.json
+!data/*.example.json
+# Keep docker/*.md bootstrap files for COPY in Dockerfile.openclaw
+.env
+.env.*
+!.env.example
+docker/.env
+docker/.env.docker
+design
+coverage
+*.log

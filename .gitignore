@@ -33,11 +33,14 @@ yarn-error.log*
 # env files (contains sensitive credentials)
 .env*
 !.env.example
+docker/.env
 
 # production data (contains instance-specific operational data)
 /data/*.json
 !data/*.example.json
 /data/*.db
+/data/*.db-shm
+/data/*.db-wal
 /data/*.sqlite
 /data/*.sqlite3
 
